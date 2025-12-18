@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Memory Matrix - Ultimate Pattern Recognition</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Exo+2:wght@300;400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="game-container">
+        <!-- Background Effects -->
+        <div class="neural-bg"></div>
+        <div class="particle-field"></div>
+        
+        <!-- Main Game Board -->
+        <div class="game-board">
+            <!-- Header -->
+            <header class="game-header">
+                <div class="brand">
+                    <h1 class="game-title">MEMORY MATRIX</h1>
+                    <div class="subtitle">Neural Pattern Recognition</div>
+                </div>
+                
+                <div class="stats-panel">
+                    <div class="stat-item">
+                        <span class="stat-label">LEVEL</span>
+                        <span class="stat-value" id="currentLevel">1</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">SCORE</span>
+                        <span class="stat-value" id="currentScore">0</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">STREAK</span>
+                        <span class="stat-value" id="currentStreak">0</span>
+                    </div>
+                </div>
+                
+                <div class="timer-container">
+                    <div class="timer-label">TIME</div>
+                    <div class="timer" id="gameTimer">30</div>
+                    <div class="timer-bar">
+                        <div class="timer-fill" id="timerFill"></div>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Main Game Area -->
+            <main class="game-area" id="gameArea">
+                <div class="challenge-title" id="challengeTitle">PREPARE YOUR MIND</div>
+                <div class="challenge-content" id="challengeContent">
+                    <!-- Grid will be injected here -->
+                </div>
+                <div class="challenge-instructions" id="challengeInstructions">
+                    Get ready for neural enhancement...
+                </div>
+            </main>
+
+            <!-- Action Bar -->
+            <div class="action-bar" id="actionBar">
+                <!-- Dynamic buttons will appear here -->
+            </div>
+        </div>
+
+        <!-- Welcome Screen -->
+        <div class="overlay-screen" id="welcomeScreen">
+            <div class="screen-content">
+                <div class="hero-title">
+                    <span class="title-main">MEMORY</span>
+                    <span class="title-accent">MATRIX</span>
+                </div>
+                <div class="hero-subtitle">Ultimate Pattern Recognition Challenge</div>
+                
+                <div class="feature-grid">
+                    <div class="feature-item">
+                        <div class="feature-icon">🧠</div>
+                        <div class="feature-text">Neural Training</div>
+                    </div>
+                    <div class="feature-item">
+                        <div class="feature-icon">⚡</div>
+                        <div class="feature-text">Lightning Fast</div>
+                    </div>
+                    <div class="feature-item">
+                        <div class="feature-icon">🏆</div>
+                        <div class="feature-text">Global Leaderboard</div>
+                    </div>
+                    <div class="feature-item">
+                        <div class="feature-icon">🎯</div>
+                        <div class="feature-text">Precision Focus</div>
+                    </div>
+                </div>
+
+                <div class="name-input-container">
+                    <input type="text" id="playerName" class="name-input" placeholder="Enter your neural tag..." maxlength="20">
+                </div>
+                
+                <button class="cta-button" id="startGameBtn">
+                    <span class="btn-text">INITIALIZE NEURAL LINK</span>
+                    <span class="btn-effect"></span>
+                </button>
+                
+                <button class="secondary-button" id="showLeaderboardBtn">
+                    <span>VIEW LEADERBOARD</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Game Over Screen -->
+        <div class="overlay-screen hidden" id="gameOverScreen">
+            <div class="screen-content">
+                <div class="game-over-title">NEURAL LINK</div>
+                <div class="game-over-subtitle" id="gameOverSubtitle">TERMINATED</div>
+                
+                <div class="final-stats" id="finalStats">
+                    <!-- Stats will be populated -->
+                </div>
+                
+                <div class="rank-display" id="rankDisplay">
+                    <!-- Ranking will be shown -->
+                </div>
+                
+                <div class="button-group">
+                    <button class="cta-button" id="playAgainBtn">
+                        <span class="btn-text">RESTART NEURAL LINK</span>
+                        <span class="btn-effect"></span>
+                    </button>
+                    <button class="secondary-button" id="viewLeaderboardBtn">
+                        <span>VIEW RANKINGS</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Leaderboard Screen -->
+        <div class="overlay-screen hidden" id="leaderboardScreen">
+            <div class="screen-content">
+                <div class="leaderboard-title">NEURAL ELITE</div>
+                <div class="leaderboard-subtitle">Top Pattern Recognition Specialists</div>
+                
+                <div class="leaderboard-container">
+                    <div class="leaderboard-header">
+                        <span>RANK</span>
+                        <span>NEURAL TAG</span>
+                        <span>LEVEL</span>
+                        <span>SCORE</span>
+                    </div>
+                    <div class="leaderboard-list" id="leaderboardList">
+                        <!-- Leaderboard entries will be populated -->
+                    </div>
+                </div>
+                
+                <button class="secondary-button" id="backFromLeaderboardBtn">
+                    <span>RETURN TO BASE</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Status Messages -->
+        <div class="status-messages" id="statusMessages">
+            <!-- Dynamic messages appear here -->
+        </div>
+    </div>
+
+    <script src="leaderboard.js"></script>
+    <script src="game.js"></script>
+    <script>
+        // Initialize game when DOM is ready
+        document.addEventListener('DOMContentLoaded', () => {
+            game.init();
+        });
+    </script>
+</body>
+</html>
