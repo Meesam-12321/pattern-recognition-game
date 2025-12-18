@@ -8,6 +8,307 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Exo+2:wght@300;400;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="styles.css">
+    <style>
+        /* Ensure the game board fits properly with sidebar */
+        @media (max-width: 1200px) {
+            .game-board {
+                max-width: 100%;
+                grid-template-columns: 1fr 240px;
+            }
+            
+            .live-leaderboard {
+                padding: 15px;
+                font-size: 12px;
+            }
+            
+            .memory-cell {
+                width: 60px;
+                height: 60px;
+                font-size: 18px;
+            }
+            
+            .challenge-title {
+                font-size: 28px;
+            }
+        }
+        
+        @media (max-width: 900px) {
+            .game-board {
+                grid-template-columns: 1fr;
+                grid-template-rows: auto auto 1fr auto;
+                grid-template-areas: 
+                    "header"
+                    "sidebar"
+                    "main"
+                    "actions";
+                height: auto;
+                min-height: 95vh;
+            }
+            
+            .live-leaderboard {
+                border-left: none;
+                border-bottom: 2px solid var(--primary-glow);
+                max-height: 150px;
+                overflow-y: auto;
+            }
+            
+            .memory-cell {
+                width: 55px;
+                height: 55px;
+                font-size: 16px;
+            }
+            
+            .challenge-title {
+                font-size: 24px;
+            }
+            
+            .game-area {
+                padding: 20px;
+                min-height: 400px;
+            }
+        }
+        
+        @media (max-width: 600px) {
+            .game-board {
+                width: 100%;
+                height: auto;
+                min-height: 100vh;
+                border-radius: 0;
+                grid-template-rows: auto auto 1fr auto;
+            }
+            
+            .game-header {
+                padding: 10px 15px;
+                flex-direction: column;
+                gap: 10px;
+            }
+            
+            .stats-panel {
+                flex-wrap: wrap;
+                gap: 10px;
+                justify-content: center;
+            }
+            
+            .stat-item {
+                min-width: 60px;
+                padding: 6px 10px;
+                font-size: 11px;
+            }
+            
+            .live-leaderboard {
+                max-height: 120px;
+                padding: 10px;
+                gap: 10px;
+            }
+            
+            .memory-cell {
+                width: 45px;
+                height: 45px;
+                font-size: 14px;
+                gap: 8px;
+            }
+            
+            .challenge-title {
+                font-size: 20px;
+                margin-bottom: 20px;
+            }
+            
+            .challenge-instructions {
+                font-size: 14px;
+                padding: 10px 15px;
+            }
+            
+            .game-area {
+                padding: 15px;
+                min-height: 300px;
+            }
+            
+            .timer {
+                font-size: 20px;
+            }
+            
+            .timer-bar {
+                width: 60px;
+            }
+            
+            /* Mobile overlay adjustments */
+            .overlay-screen {
+                padding: 20px;
+            }
+            
+            .screen-content {
+                padding: 20px;
+                max-width: 100%;
+            }
+            
+            .title-main, .title-accent {
+                font-size: 32px;
+            }
+            
+            .hero-subtitle {
+                font-size: 16px;
+            }
+            
+            .feature-grid {
+                grid-template-columns: 1fr;
+                gap: 10px;
+            }
+            
+            .feature-item {
+                padding: 15px;
+            }
+            
+            .cta-button {
+                padding: 15px 25px;
+                font-size: 14px;
+                width: 100%;
+                max-width: 280px;
+            }
+            
+            .name-input {
+                width: 100%;
+                max-width: 280px;
+                font-size: 14px;
+            }
+        }
+        
+        /* Ultra-small screens */
+        @media (max-width: 400px) {
+            .game-container {
+                padding: 5px;
+            }
+            
+            .game-board {
+                border-radius: 10px;
+            }
+            
+            .memory-cell {
+                width: 40px;
+                height: 40px;
+                font-size: 12px;
+                gap: 6px;
+            }
+            
+            .challenge-title {
+                font-size: 18px;
+            }
+            
+            .title-main, .title-accent {
+                font-size: 28px;
+            }
+            
+            .live-leaderboard {
+                max-height: 100px;
+                font-size: 10px;
+            }
+            
+            .mini-entry {
+                padding: 6px 8px;
+                font-size: 10px;
+            }
+            
+            .stat-item {
+                min-width: 50px;
+                padding: 5px 8px;
+            }
+        }
+        
+        /* Landscape mobile adjustments */
+        @media (max-height: 500px) and (orientation: landscape) {
+            .game-board {
+                grid-template-columns: 1fr 200px;
+                grid-template-rows: auto 1fr auto;
+                grid-template-areas: 
+                    "header sidebar"
+                    "main sidebar"
+                    "actions sidebar";
+                height: 95vh;
+            }
+            
+            .live-leaderboard {
+                border-left: 2px solid var(--primary-glow);
+                border-bottom: none;
+                max-height: none;
+                padding: 10px;
+            }
+            
+            .game-area {
+                padding: 15px;
+                min-height: auto;
+            }
+            
+            .memory-cell {
+                width: 35px;
+                height: 35px;
+                font-size: 12px;
+            }
+            
+            .challenge-title {
+                font-size: 18px;
+                margin-bottom: 15px;
+            }
+            
+            .overlay-screen .screen-content {
+                padding: 15px;
+                max-height: 90vh;
+                overflow-y: auto;
+            }
+        }
+        
+        /* Ensure proper scrolling on mobile */
+        body {
+            overflow-x: hidden;
+            -webkit-overflow-scrolling: touch;
+        }
+        
+        .game-container {
+            min-height: 100vh;
+            overflow: hidden;
+        }
+        
+        /* Fix touch interactions */
+        .memory-cell,
+        .option-btn,
+        .cta-button,
+        .secondary-button {
+            -webkit-tap-highlight-color: transparent;
+            touch-action: manipulation;
+        }
+        
+        /* Improve readability on small screens */
+        @media (max-width: 600px) {
+            .sidebar-header h3 {
+                font-size: 14px;
+            }
+            
+            .current-rank {
+                font-size: 10px;
+                padding: 6px 10px;
+            }
+            
+            .level-badge {
+                font-size: 12px;
+            }
+            
+            .level-description {
+                font-size: 9px;
+            }
+            
+            .section-title {
+                font-size: 10px;
+            }
+            
+            .mini-rank,
+            .mini-name,
+            .mini-level {
+                font-size: 9px;
+            }
+            
+            .session-stats .stat {
+                font-size: 10px;
+            }
+        }
+    </style>
 </head>
 <body>
     <div class="game-container">
@@ -58,6 +359,36 @@
                     Get ready for neural enhancement...
                 </div>
             </main>
+
+            <!-- Live Leaderboard Sidebar -->
+            <aside class="live-leaderboard" id="liveLeaderboard">
+                <div class="sidebar-header">
+                    <h3>🏆 LIVE RANKINGS</h3>
+                    <div class="current-rank" id="currentRank">Play to get ranked!</div>
+                </div>
+                
+                <div class="memory-level-indicator" id="memoryLevel">
+                    <div class="level-title">Memory Level</div>
+                    <div class="level-badge" id="levelBadge">🧠 NEURAL ROOKIE</div>
+                    <div class="level-description" id="levelDescription">Just getting started!</div>
+                </div>
+                
+                <div class="top-players">
+                    <div class="section-title">TOP SPECIALISTS</div>
+                    <div class="mini-leaderboard" id="miniLeaderboard">
+                        <!-- Top players will be shown here -->
+                    </div>
+                </div>
+                
+                <div class="current-session">
+                    <div class="section-title">YOUR SESSION</div>
+                    <div class="session-stats" id="sessionStats">
+                        <div class="stat">Best Level: <span id="sessionBestLevel">0</span></div>
+                        <div class="stat">Games Played: <span id="sessionGames">0</span></div>
+                        <div class="stat">Total Score: <span id="sessionScore">0</span></div>
+                    </div>
+                </div>
+            </aside>
 
             <!-- Action Bar -->
             <div class="action-bar" id="actionBar">
@@ -169,7 +500,15 @@
     <script>
         // Initialize game when DOM is ready
         document.addEventListener('DOMContentLoaded', () => {
-            game.init();
+            // Wait for all scripts to load
+            setTimeout(() => {
+                if (typeof MemoryMatrixGame !== 'undefined') {
+                    window.game = new MemoryMatrixGame();
+                    console.log('Game initialized successfully');
+                } else {
+                    console.error('MemoryMatrixGame class not found');
+                }
+            }, 100);
         });
     </script>
 </body>

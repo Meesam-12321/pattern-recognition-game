@@ -15,6 +15,27 @@ class MemoryMatrixGame {
             showingPattern: false
         };
         
+        // Session tracking for live stats
+        this.sessionStats = {
+            gamesPlayed: 0,
+            bestLevel: 0,
+            totalScore: 0,
+            currentRank: null
+        };
+        
+        // Memory level definitions
+        this.memoryLevels = [
+            { min: 1, max: 2, badge: "🧠 NEURAL ROOKIE", desc: "Your memory journey begins!" },
+            { min: 3, max: 4, badge: "🔋 SYNAPSE STARTER", desc: "Building neural pathways..." },
+            { min: 5, max: 7, badge: "⚡ COGNITIVE CADET", desc: "Connections are strengthening!" },
+            { min: 8, max: 10, badge: "🎯 PATTERN TRACKER", desc: "Your focus is impressive!" },
+            { min: 11, max: 15, badge: "🚀 MEMORY MAVEN", desc: "Outstanding recall abilities!" },
+            { min: 16, max: 20, badge: "💎 NEURAL NINJA", desc: "Elite pattern recognition!" },
+            { min: 21, max: 25, badge: "🏆 COGNITIVE CHAMPION", desc: "Exceptional mental prowess!" },
+            { min: 26, max: 30, badge: "👑 MEMORY MASTER", desc: "Legendary cognitive skills!" },
+            { min: 31, max: 999, badge: "🌟 NEURAL LEGEND", desc: "Transcendent mental abilities!" }
+        ];
+        
         this.challenge = {
             sequence: [],
             userSequence: [],
@@ -39,23 +60,9 @@ class MemoryMatrixGame {
     init() {
         this.cacheElements();
         this.bindEvents();
-        
-        // Initialize leaderboard and show welcome screen
-        this.initializeLeaderboard();
+        this.showWelcomeScreen();
         
         console.log('Memory Matrix initialized');
-    }
-    
-    // Initialize leaderboard system
-    async initializeLeaderboard() {
-        try {
-            // Ensure leaderboard is properly initialized
-            await leaderboard.init();
-            this.showWelcomeScreen();
-        } catch (error) {
-            console.error('Error initializing leaderboard:', error);
-            this.showWelcomeScreen();
-        }
     }
     
     // Cache DOM elements
@@ -71,6 +78,16 @@ class MemoryMatrixGame {
             challengeContent: document.getElementById('challengeContent'),
             challengeInstructions: document.getElementById('challengeInstructions'),
             actionBar: document.getElementById('actionBar'),
+            
+            // Sidebar elements
+            liveLeaderboard: document.getElementById('liveLeaderboard'),
+            currentRank: document.getElementById('currentRank'),
+            levelBadge: document.getElementById('levelBadge'),
+            levelDescription: document.getElementById('levelDescription'),
+            miniLeaderboard: document.getElementById('miniLeaderboard'),
+            sessionBestLevel: document.getElementById('sessionBestLevel'),
+            sessionGames: document.getElementById('sessionGames'),
+            sessionScore: document.getElementById('sessionScore'),
             
             // Screens
             welcomeScreen: document.getElementById('welcomeScreen'),
@@ -191,10 +208,7 @@ class MemoryMatrixGame {
     
     // Generate challenge based on current level
     generateChallenge() {
-        if (!this.gameState.gameActive) {
-            console.log('Challenge generation skipped - game not active');
-            return;
-        }
+        if (!this.gameState.gameActive) return;
         
         // Stop any existing timer
         this.stopTimer();
@@ -208,46 +222,22 @@ class MemoryMatrixGame {
         this.challenge.showSpeed = Math.max(400, 800 - (level * 15)); // Faster as levels increase
         
         // Dynamic time limit based on difficulty
-        this.gameState.maxTime = Math.max(15, 35 - Math.floor(level / 2)); // More generous time
+        this.gameState.maxTime = Math.max(10, 30 - Math.floor(level / 3));
         this.gameState.timeLeft = this.gameState.maxTime;
         
-        // Reset challenge state completely
+        // Reset challenge state
         this.challenge.sequence = [];
         this.challenge.userSequence = [];
         this.challenge.currentStep = 0;
         this.gameState.showingPattern = true;
         
-        // Generate random sequence avoiding consecutive duplicates
+        // Generate random sequence
         const gridCells = this.challenge.gridSize * this.challenge.gridSize;
-        
         for (let i = 0; i < this.challenge.sequenceLength; i++) {
-            let newCell;
-            let attempts = 0;
-            
-            do {
-                newCell = Math.floor(Math.random() * gridCells);
-                attempts++;
-                
-                // Safety check to prevent infinite loop in small grids
-                if (attempts > 50) {
-                    console.warn('Too many attempts to find unique cell, allowing duplicate');
-                    break;
-                }
-            } while (i > 0 && newCell === this.challenge.sequence[i - 1] && gridCells > 1);
-            
-            this.challenge.sequence.push(newCell);
+            this.challenge.sequence.push(Math.floor(Math.random() * gridCells));
         }
         
-        console.log(`Level ${level}: Grid ${this.challenge.gridSize}x${this.challenge.gridSize}, Sequence ${this.challenge.sequenceLength}, Speed ${this.challenge.showSpeed}ms, Time ${this.gameState.maxTime}s`);
-        console.log('Generated sequence (no consecutive duplicates):', this.challenge.sequence);
-        
-        // Verify no consecutive duplicates (for debugging)
-        const hasConsecutiveDuplicates = this.challenge.sequence.some((cell, index) => 
-            index > 0 && cell === this.challenge.sequence[index - 1]
-        );
-        if (hasConsecutiveDuplicates) {
-            console.warn('Warning: Sequence still has consecutive duplicates!');
-        }
+        console.log(`Level ${level}: Grid ${this.challenge.gridSize}x${this.challenge.gridSize}, Sequence ${this.challenge.sequenceLength}, Speed ${this.challenge.showSpeed}ms`);
         
         // Update UI
         this.elements.challengeTitle.textContent = `LEVEL ${level} - NEURAL PATTERN`;
@@ -258,10 +248,8 @@ class MemoryMatrixGame {
         
         // Show pattern after brief delay
         setTimeout(() => {
-            if (this.gameState.gameActive) {
-                this.showPattern();
-            }
-        }, 1200);
+            this.showPattern();
+        }, 1000);
         
         this.updateDisplay();
     }
@@ -281,14 +269,11 @@ class MemoryMatrixGame {
             const cell = document.createElement('div');
             cell.className = 'memory-cell';
             cell.dataset.index = i;
-            cell.style.position = 'relative'; // For step indicators
             cell.addEventListener('click', () => this.selectCell(i));
             grid.appendChild(cell);
         }
         
         container.appendChild(grid);
-        
-        console.log(`Created ${totalCells} cells for ${this.challenge.gridSize}x${this.challenge.gridSize} grid`);
     }
     
     // Show pattern sequence
@@ -325,140 +310,58 @@ class MemoryMatrixGame {
     
     // Start player's turn
     startPlayerTurn() {
-        // Make sure game is still active
-        if (!this.gameState.gameActive) return;
-        
         this.gameState.showingPattern = false;
         
-        // Clear all highlights and reset all visual states
+        // Clear all highlights
         document.querySelectorAll('.memory-cell').forEach(cell => {
             cell.classList.remove('active');
-            // Clear any step indicators from previous attempts
-            const indicators = cell.querySelectorAll('.step-indicator');
-            indicators.forEach(indicator => indicator.remove());
-            // Reset styles
-            cell.style.boxShadow = '';
-            cell.style.borderColor = '';
-            cell.style.background = '';
-            cell.style.cursor = 'pointer';
-            cell.style.pointerEvents = 'auto';
         });
-        
-        // Reset user sequence
-        this.challenge.userSequence = [];
         
         // Update UI
         this.elements.challengeTitle.textContent = 'REPEAT THE PATTERN';
         this.elements.challengeInstructions.textContent = 'Click the cells in the exact same order!';
         
-        // Ensure we have valid time before starting timer
-        if (this.gameState.timeLeft <= 0) {
-            this.gameState.timeLeft = this.gameState.maxTime;
-        }
-        
         // Start timer
         this.startTimer();
         
-        console.log('Player turn started, sequence to match:', this.challenge.sequence);
-        console.log('Time available:', this.gameState.timeLeft);
+        // Add visual feedback
+        document.querySelectorAll('.memory-cell').forEach(cell => {
+            cell.style.cursor = 'pointer';
+        });
     }
     
     // Handle cell selection
     selectCell(index) {
-        // Multiple safety checks
-        if (this.gameState.showingPattern || !this.gameState.gameActive) {
-            console.log('Cell selection blocked:', { showingPattern: this.gameState.showingPattern, gameActive: this.gameState.gameActive });
-            return;
-        }
+        if (this.gameState.showingPattern || !this.gameState.gameActive) return;
         
         const cell = document.querySelector(`.memory-cell[data-index="${index}"]`);
-        if (!cell) {
-            console.log('Cell not found:', index);
-            return;
-        }
-        
         const stepIndex = this.challenge.userSequence.length;
         const expectedIndex = this.challenge.sequence[stepIndex];
         
-        console.log(`Selected cell ${index}, expected ${expectedIndex} (step ${stepIndex + 1}/${this.challenge.sequence.length})`);
-        console.log('Full sequence:', this.challenge.sequence);
-        console.log('User sequence so far:', this.challenge.userSequence);
+        console.log(`Selected cell ${index}, expected ${expectedIndex} (step ${stepIndex})`);
         
-        // Add to user sequence
         this.challenge.userSequence.push(index);
         
         if (index === expectedIndex) {
             // Correct selection
+            cell.classList.add('correct');
             this.sounds.success();
-            
-            // Create a visual indicator for this step (don't use permanent classes)
-            const stepIndicator = document.createElement('div');
-            stepIndicator.className = 'step-indicator';
-            stepIndicator.textContent = stepIndex + 1;
-            stepIndicator.style.cssText = `
-                position: absolute;
-                top: 2px;
-                right: 2px;
-                background: #00ff41;
-                color: #000;
-                border-radius: 50%;
-                width: 16px;
-                height: 16px;
-                font-size: 10px;
-                font-weight: bold;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                z-index: 5;
-            `;
-            cell.appendChild(stepIndicator);
-            
-            // Add temporary success effect without permanent class
-            cell.style.boxShadow = '0 0 20px #00ff41';
-            cell.style.borderColor = '#00ff41';
-            
-            setTimeout(() => {
-                if (cell) {
-                    cell.style.boxShadow = '';
-                    cell.style.borderColor = '';
-                }
-            }, 500);
             
             if (this.challenge.userSequence.length === this.challenge.sequence.length) {
                 // Pattern completed successfully!
-                setTimeout(() => {
-                    this.completeLevel();
-                }, 300);
+                this.completeLevel();
             }
         } else {
-            // Wrong selection - end game immediately
+            // Wrong selection
+            cell.classList.add('wrong');
             this.sounds.error();
-            
-            // Show error effect
-            cell.style.boxShadow = '0 0 20px #ff4444';
-            cell.style.borderColor = '#ff4444';
-            cell.style.background = 'linear-gradient(135deg, #ff4444, #aa0000)';
-            
-            // Show correct sequence for debugging
-            console.log('WRONG! Expected sequence:', this.challenge.sequence);
-            console.log('User clicked:', this.challenge.userSequence);
-            
-            // Disable further clicks
-            document.querySelectorAll('.memory-cell').forEach(c => {
-                c.style.pointerEvents = 'none';
-            });
-            
-            setTimeout(() => {
-                this.failLevel();
-            }, 800);
+            this.failLevel();
         }
     }
     
     // Complete level successfully
     completeLevel() {
         this.stopTimer();
-        
-        // Temporarily disable game to prevent double-clicks
         this.gameState.gameActive = false;
         
         // Calculate score
@@ -473,19 +376,6 @@ class MemoryMatrixGame {
         
         // Update display
         this.updateDisplay();
-        
-        // Clean up visual indicators and disable cell interactions
-        document.querySelectorAll('.memory-cell').forEach(cell => {
-            cell.style.cursor = 'not-allowed';
-            cell.style.pointerEvents = 'none';
-            // Clear any step indicators
-            const indicators = cell.querySelectorAll('.step-indicator');
-            indicators.forEach(indicator => indicator.remove());
-            // Reset styles
-            cell.style.boxShadow = '';
-            cell.style.borderColor = '';
-            cell.style.background = '';
-        });
         
         // Show success message
         const messages = [
@@ -504,14 +394,12 @@ class MemoryMatrixGame {
             this.sounds.levelUp();
         }
         
-        // Progress to next level after delay
+        // Progress to next level
         setTimeout(() => {
             this.gameState.currentLevel++;
             this.gameState.gameActive = true;
             this.generateChallenge();
-        }, 2500);
-        
-        console.log(`Level ${this.gameState.currentLevel} completed successfully`);
+        }, 2000);
     }
     
     // Handle level failure
@@ -541,75 +429,183 @@ class MemoryMatrixGame {
         this.stopTimer();
         this.gameState.gameActive = false;
         
-        // Determine final outcome
+        // Update session stats
+        this.sessionStats.gamesPlayed++;
+        this.sessionStats.bestLevel = Math.max(this.sessionStats.bestLevel, this.gameState.currentLevel);
+        this.sessionStats.totalScore += this.gameState.score;
+        
+        // Get memory level assessment
+        const memoryLevel = this.memoryLevels.find(ml => 
+            this.gameState.currentLevel >= ml.min && this.gameState.currentLevel <= ml.max
+        );
+        
+        // Determine final outcome with positive messaging
         const isHighScore = this.gameState.currentLevel >= 10;
-        const subtitle = isHighScore ? 'NEURAL ENHANCEMENT ACHIEVED' : 'SYSTEM RESET REQUIRED';
+        const subtitle = isHighScore ? 'NEURAL ENHANCEMENT ACHIEVED' : 'EXCELLENT NEURAL WORKOUT';
         
         this.elements.gameOverSubtitle.textContent = subtitle;
         
-        // Show final statistics
+        // Show final statistics with positive memory assessment
+        const memoryAssessment = this.getPositiveMemoryAssessment(this.gameState.currentLevel);
+        
         const stats = `
-            <div class="stat-row">
-                <span class="stat-label">MAXIMUM LEVEL REACHED:</span>
-                <span class="stat-value">${this.gameState.currentLevel}</span>
+            <div class="memory-assessment" style="background: rgba(0,255,255,0.1); padding: 15px; border-radius: 10px; margin-bottom: 20px; border: 1px solid rgba(0,255,255,0.3);">
+                <div style="font-size: 14px; color: #00ffff; font-weight: bold; margin-bottom: 8px;">🧠 MEMORY ASSESSMENT</div>
+                <div style="font-size: 16px; color: #00ff41; font-weight: bold; margin-bottom: 10px; font-family: 'Orbitron', monospace;">${memoryLevel ? memoryLevel.badge : '🧠 NEURAL TRAINEE'}</div>
+                <div style="font-size: 12px; color: #ffffff; line-height: 1.4;">${memoryAssessment}</div>
             </div>
-            <div class="stat-row">
-                <span class="stat-label">TOTAL NEURAL POINTS:</span>
-                <span class="stat-value">${this.gameState.score.toLocaleString()}</span>
-            </div>
-            <div class="stat-row">
-                <span class="stat-label">MAXIMUM STREAK:</span>
-                <span class="stat-value">${this.gameState.maxStreak}</span>
-            </div>
-            <div class="stat-row">
-                <span class="stat-label">COGNITIVE EFFICIENCY:</span>
-                <span class="stat-value">${this.calculateEfficiency()}%</span>
+            <div class="performance-stats">
+                <div class="stat-row">
+                    <span class="stat-label">MAXIMUM LEVEL REACHED:</span>
+                    <span class="stat-value">${this.gameState.currentLevel}</span>
+                </div>
+                <div class="stat-row">
+                    <span class="stat-label">NEURAL POINTS EARNED:</span>
+                    <span class="stat-value">${this.gameState.score.toLocaleString()}</span>
+                </div>
+                <div class="stat-row">
+                    <span class="stat-label">MAXIMUM STREAK:</span>
+                    <span class="stat-value">${this.gameState.maxStreak} levels</span>
+                </div>
+                <div class="stat-row">
+                    <span class="stat-label">COGNITIVE PERFORMANCE:</span>
+                    <span class="stat-value">${this.calculateEfficiency()}% efficiency</span>
+                </div>
             </div>
         `;
         
         this.elements.finalStats.innerHTML = stats;
         
-        // Add to leaderboard and show feedback
-        console.log(`Adding score to leaderboard: ${this.gameState.playerName}, Level ${this.gameState.currentLevel}, Score ${this.gameState.score}`);
-        
+        // Add to leaderboard
         const rank = leaderboard.addScore(
             this.gameState.playerName,
             this.gameState.currentLevel,
             this.gameState.score
         );
         
-        console.log(`Player ranked #${rank} in leaderboard`);
-        
-        // Show ranking with more details
-        const totalPlayers = leaderboard.scores.length;
+        // Show ranking
         let rankText = '';
-        let rankSubtext = '';
-        
         if (rank <= 3) {
-            const medals = ['🥇 NEURAL CHAMPION', '🥈 COGNITIVE ELITE', '🥉 PATTERN MASTER'];
-            rankText = `${medals[rank - 1]}`;
-            rankSubtext = `Rank #${rank} - You're in the top 3!`;
+            const medals = ['🥇', '🥈', '🥉'];
+            rankText = `${medals[rank - 1]} NEURAL ELITE RANK #${rank}!`;
         } else if (rank <= 10) {
-            rankText = `🏆 NEURAL SPECIALIST`;
-            rankSubtext = `Rank #${rank} - Top 10 Elite!`;
-        } else if (rank <= Math.ceil(totalPlayers * 0.25)) {
-            rankText = `⚡ COGNITIVE OPERATIVE`;
-            rankSubtext = `Rank #${rank} - Top 25% Performer`;
+            rankText = `🏆 TOP 10 SPECIALIST - RANK #${rank}`;
         } else {
-            rankText = `🧠 NEURAL RECRUIT`;
-            rankSubtext = `Rank #${rank} among ${totalPlayers} specialists`;
+            rankText = `RANKED #${rank} IN NEURAL NETWORK`;
         }
         
         this.elements.rankDisplay.innerHTML = `
             <div class="rank-text">${rankText}</div>
-            <div class="rank-subtitle">${rankSubtext}</div>
-            <div class="rank-stats">
-                <small>🎯 Best: Level ${this.gameState.currentLevel} • 💎 Score: ${this.gameState.score.toLocaleString()}</small>
-            </div>
+            <div class="rank-subtitle">Among ${leaderboard.scores.length} Neural Specialists</div>
         `;
         
         // Show game over screen
         this.elements.gameOverScreen.classList.remove('hidden');
+    }
+    
+    // Get positive memory assessment based on level reached
+    getPositiveMemoryAssessment(level) {
+        if (level >= 25) return "🌟 Extraordinary! Your memory is operating at an elite level. You've demonstrated exceptional pattern recognition and recall abilities that place you among the cognitive elite.";
+        if (level >= 20) return "👑 Outstanding! Your memory skills are truly impressive. You've shown remarkable ability to process and recall complex patterns with precision and speed.";
+        if (level >= 15) return "💎 Excellent work! Your memory is performing exceptionally well. You've demonstrated strong pattern recognition and sustained attention that's well above average.";
+        if (level >= 10) return "🏆 Great job! Your memory skills are really developing nicely. You've shown good focus and pattern recognition abilities that are steadily improving.";
+        if (level >= 7) return "🚀 Well done! You're making solid progress with your memory training. Your brain is adapting well to pattern recognition challenges.";
+        if (level >= 5) return "⚡ Good effort! Your memory is warming up beautifully. You're building strong neural pathways for pattern recognition.";
+        if (level >= 3) return "🔋 Nice start! Your memory is getting into the groove. Every level completed strengthens your cognitive abilities.";
+        return "🧠 Great beginning! You've taken the first steps in memory training. Your brain is already starting to form new neural connections. Keep practicing!";
+    }
+    
+    // Update memory level assessment
+    updateMemoryLevel() {
+        const level = this.gameState.currentLevel;
+        const memoryLevel = this.memoryLevels.find(ml => level >= ml.min && level <= ml.max);
+        
+        if (memoryLevel && this.elements.levelBadge && this.elements.levelDescription) {
+            this.elements.levelBadge.textContent = memoryLevel.badge;
+            this.elements.levelDescription.textContent = memoryLevel.desc;
+        }
+    }
+    
+    // Update current rank display
+    updateCurrentRank() {
+        if (!this.elements.currentRank) return;
+        
+        if (!this.gameState.playerName || !this.gameState.gameActive) {
+            this.elements.currentRank.textContent = 'Play to get ranked!';
+            return;
+        }
+        
+        // Find approximate rank based on current performance
+        const currentPerformance = {
+            level: this.gameState.currentLevel,
+            score: this.gameState.score
+        };
+        
+        const betterPlayers = leaderboard.scores.filter(score => 
+            score.level > currentPerformance.level || 
+            (score.level === currentPerformance.level && score.score > currentPerformance.score)
+        );
+        
+        const estimatedRank = betterPlayers.length + 1;
+        this.sessionStats.currentRank = estimatedRank;
+        
+        if (estimatedRank <= 3) {
+            this.elements.currentRank.innerHTML = `🏆 Currently #${estimatedRank}!`;
+        } else if (estimatedRank <= 10) {
+            this.elements.currentRank.innerHTML = `⚡ Currently #${estimatedRank}`;
+        } else {
+            this.elements.currentRank.innerHTML = `🧠 Currently #${estimatedRank}`;
+        }
+    }
+    
+    // Update mini leaderboard
+    updateMiniLeaderboard() {
+        if (!this.elements.miniLeaderboard) return;
+        
+        const topPlayers = leaderboard.getTopScores(5);
+        const container = this.elements.miniLeaderboard;
+        container.innerHTML = '';
+        
+        if (topPlayers.length === 0) {
+            container.innerHTML = '<div style="text-align: center; color: #666; font-size: 10px;">No players yet</div>';
+            return;
+        }
+        
+        topPlayers.forEach((player, index) => {
+            const entry = document.createElement('div');
+            entry.className = 'mini-entry';
+            
+            // Add special styling for top 3
+            if (index === 0) entry.classList.add('top-1');
+            else if (index === 1) entry.classList.add('top-2');
+            else if (index === 2) entry.classList.add('top-3');
+            
+            // Highlight current player
+            if (player.name === this.gameState.playerName) {
+                entry.classList.add('current-player');
+            }
+            
+            entry.innerHTML = `
+                <div class="mini-rank">${index + 1}</div>
+                <div class="mini-name">${player.name}</div>
+                <div class="mini-level">L${player.level}</div>
+            `;
+            
+            container.appendChild(entry);
+        });
+    }
+    
+    // Update session statistics
+    updateSessionStats() {
+        if (this.elements.sessionBestLevel) {
+            this.elements.sessionBestLevel.textContent = this.sessionStats.bestLevel;
+        }
+        if (this.elements.sessionGames) {
+            this.elements.sessionGames.textContent = this.sessionStats.gamesPlayed;
+        }
+        if (this.elements.sessionScore) {
+            this.elements.sessionScore.textContent = this.sessionStats.totalScore.toLocaleString();
+        }
     }
     
     // Calculate efficiency percentage
@@ -623,14 +619,6 @@ class MemoryMatrixGame {
     
     // Start countdown timer
     startTimer() {
-        // Clear any existing timer first
-        this.stopTimer();
-        
-        // Make sure we have valid time
-        if (this.gameState.timeLeft <= 0) {
-            this.gameState.timeLeft = this.gameState.maxTime;
-        }
-        
         this.gameTimer = setInterval(() => {
             this.gameState.timeLeft--;
             this.updateDisplay();
@@ -641,10 +629,7 @@ class MemoryMatrixGame {
             
             if (this.gameState.timeLeft <= 0) {
                 this.stopTimer();
-                // Only fail if game is still active and not showing pattern
-                if (this.gameState.gameActive && !this.gameState.showingPattern) {
-                    this.failLevel();
-                }
+                this.failLevel();
             }
         }, 1000);
     }
@@ -670,6 +655,112 @@ class MemoryMatrixGame {
             const percentage = (this.gameState.timeLeft / this.gameState.maxTime) * 100;
             this.elements.timerFill.style.width = `${percentage}%`;
         }
+        
+        // Update sidebar
+        this.updateSidebar();
+    }
+    
+    // Update sidebar with live information
+    updateSidebar() {
+        // Only update sidebar if elements exist (sidebar might be hidden on welcome screen)
+        if (!this.elements.liveLeaderboard || this.elements.welcomeScreen.classList.contains('hidden') === false) {
+            return;
+        }
+        
+        // Update memory level
+        this.updateMemoryLevel();
+        
+        // Update current rank
+        this.updateCurrentRank();
+        
+        // Update mini leaderboard
+        this.updateMiniLeaderboard();
+        
+        // Update session stats
+        this.updateSessionStats();
+    }
+    
+    // Update memory level assessment
+    updateMemoryLevel() {
+        const level = this.gameState.currentLevel;
+        const memoryLevel = this.memoryLevels.find(ml => level >= ml.min && level <= ml.max);
+        
+        if (memoryLevel) {
+            this.elements.levelBadge.textContent = memoryLevel.badge;
+            this.elements.levelDescription.textContent = memoryLevel.desc;
+        }
+    }
+    
+    // Update current rank display
+    updateCurrentRank() {
+        if (!this.gameState.playerName || !this.gameState.gameActive) {
+            this.elements.currentRank.textContent = 'Play to get ranked!';
+            return;
+        }
+        
+        // Find approximate rank based on current performance
+        const currentPerformance = {
+            level: this.gameState.currentLevel,
+            score: this.gameState.score
+        };
+        
+        const betterPlayers = leaderboard.scores.filter(score => 
+            score.level > currentPerformance.level || 
+            (score.level === currentPerformance.level && score.score > currentPerformance.score)
+        );
+        
+        const estimatedRank = betterPlayers.length + 1;
+        this.sessionStats.currentRank = estimatedRank;
+        
+        if (estimatedRank <= 3) {
+            this.elements.currentRank.innerHTML = `🏆 Currently #${estimatedRank}!`;
+        } else if (estimatedRank <= 10) {
+            this.elements.currentRank.innerHTML = `⚡ Currently #${estimatedRank}`;
+        } else {
+            this.elements.currentRank.innerHTML = `🧠 Currently #${estimatedRank}`;
+        }
+    }
+    
+    // Update mini leaderboard
+    updateMiniLeaderboard() {
+        const topPlayers = leaderboard.getTopScores(5);
+        const container = this.elements.miniLeaderboard;
+        container.innerHTML = '';
+        
+        if (topPlayers.length === 0) {
+            container.innerHTML = '<div style="text-align: center; color: #666; font-size: 10px;">No players yet</div>';
+            return;
+        }
+        
+        topPlayers.forEach((player, index) => {
+            const entry = document.createElement('div');
+            entry.className = 'mini-entry';
+            
+            // Add special styling for top 3
+            if (index === 0) entry.classList.add('top-1');
+            else if (index === 1) entry.classList.add('top-2');
+            else if (index === 2) entry.classList.add('top-3');
+            
+            // Highlight current player
+            if (player.name === this.gameState.playerName) {
+                entry.classList.add('current-player');
+            }
+            
+            entry.innerHTML = `
+                <div class="mini-rank">${index + 1}</div>
+                <div class="mini-name">${player.name}</div>
+                <div class="mini-level">L${player.level}</div>
+            `;
+            
+            container.appendChild(entry);
+        });
+    }
+    
+    // Update session statistics
+    updateSessionStats() {
+        this.elements.sessionBestLevel.textContent = this.sessionStats.bestLevel;
+        this.elements.sessionGames.textContent = this.sessionStats.gamesPlayed;
+        this.elements.sessionScore.textContent = this.sessionStats.totalScore.toLocaleString();
     }
     
     // Show leaderboard
@@ -692,28 +783,6 @@ class MemoryMatrixGame {
             return;
         }
         
-        // Add stats header
-        const stats = leaderboard.getStats();
-        const statsHeader = document.createElement('div');
-        statsHeader.className = 'leaderboard-stats';
-        statsHeader.style.cssText = `
-            padding: 10px 20px;
-            background: rgba(0, 255, 255, 0.05);
-            border: 1px solid rgba(0, 255, 255, 0.2);
-            border-radius: 5px;
-            margin-bottom: 15px;
-            font-size: 12px;
-            color: #00ffff;
-            text-align: center;
-        `;
-        statsHeader.innerHTML = `
-            Total Specialists: ${stats.totalPlayers} | 
-            Games Played: ${stats.totalGames} | 
-            Highest Level: ${stats.highestLevel} | 
-            Avg Level: ${stats.averageLevel}
-        `;
-        container.appendChild(statsHeader);
-        
         topScores.forEach((score, index) => {
             const entry = document.createElement('div');
             entry.className = 'leaderboard-entry';
@@ -729,78 +798,24 @@ class MemoryMatrixGame {
             else if (rank === 2) rankClass = 'silver';
             else if (rank === 3) rankClass = 'bronze';
             
-            // Format timestamp
-            const date = new Date(score.timestamp);
-            const timeAgo = this.getTimeAgo(date);
-            
             entry.innerHTML = `
                 <div class="rank-number ${rankClass}">${rank}</div>
-                <div class="player-name" title="Played ${timeAgo}">${score.name}</div>
+                <div class="player-name">${score.name}</div>
                 <div class="player-level">${score.level}</div>
                 <div class="player-score">${score.score.toLocaleString()}</div>
             `;
             
             container.appendChild(entry);
         });
-        
-        console.log(`Leaderboard updated with ${topScores.length} entries`);
-    }
-    
-    // Get human-readable time ago
-    getTimeAgo(date) {
-        const now = new Date();
-        const diffMs = now - date;
-        const diffMins = Math.floor(diffMs / (1000 * 60));
-        const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
-        const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-        
-        if (diffMins < 1) return 'just now';
-        if (diffMins < 60) return `${diffMins}m ago`;
-        if (diffHours < 24) return `${diffHours}h ago`;
-        return `${diffDays}d ago`;
     }
     
     // Restart game
     restartGame() {
-        // Stop any running timers
-        this.stopTimer();
-        
-        // Reset game state completely
-        this.gameState = {
-            currentLevel: 1,
-            score: 0,
-            streak: 0,
-            maxStreak: 0,
-            lives: 3,
-            timeLeft: 0,
-            maxTime: 0,
-            gameTimer: null,
-            playerName: '',
-            gameActive: false,
-            showingPattern: false
-        };
-        
-        // Reset challenge state
-        this.challenge = {
-            sequence: [],
-            userSequence: [],
-            gridSize: 3,
-            sequenceLength: 3,
-            showSpeed: 800,
-            currentStep: 0
-        };
-        
-        // Clear any existing grid
-        this.elements.challengeContent.innerHTML = '';
-        
-        // Hide game over screen and show welcome
         this.elements.gameOverScreen.classList.add('hidden');
         this.showWelcomeScreen();
         
-        // Clear the name input to force re-entry
-        this.elements.playerName.value = '';
-        
-        console.log('Game restarted, ready for new player');
+        // Keep the same player name
+        this.elements.playerName.value = this.gameState.playerName;
     }
     
     // Show status message
@@ -819,8 +834,5 @@ class MemoryMatrixGame {
     }
 }
 
-// Initialize game when DOM is ready
-const game = new MemoryMatrixGame();
-
 // Export for global access
-window.game = game;
+window.MemoryMatrixGame = MemoryMatrixGame;
